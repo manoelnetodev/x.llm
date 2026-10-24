@@ -21,7 +21,7 @@
 - O que já está em português não é tocado. Links, @menções e #hashtags continuam clicáveis.
 - Feed mais limpo: sem coluna da direita (trends, Premium), sem anúncios, sem botões flutuantes do
   Grok/Chat, sem autoplay de vídeo, "Show more" expandido sozinho, feed com 720 px.
-- O login fica salvo entre aberturas (login pelo Google funciona dentro do app).
+- O login fica salvo entre aberturas.
 
 A tradução usa o [TranslateGemma 4B](https://huggingface.co/google/translategemma-4b-it) (Google)
 num [llama.cpp](https://github.com/ggml-org/llama.cpp) local. O OCR usa o
@@ -74,6 +74,13 @@ versão CPU.
    O Windows SmartScreen pode avisar que o app é de fonte desconhecida (o executável não é
    assinado): clique em **Mais informações → Executar assim mesmo**.
 2. Abra o X.LLM e faça login no X normalmente.
+
+   > **Atenção:** o login com o **Google** ("Entrar com o Google") pode não funcionar. O Google
+   > costuma bloquear login dentro de apps que embutem um navegador, como este, com mensagens do
+   > tipo "Este navegador ou app pode não ser seguro". Se acontecer, entre com **usuário/e-mail e
+   > senha do X**. Se a sua conta só tem login pelo Google, crie uma senha antes, pelo navegador,
+   > em x.com → Configurações → Sua conta → Alterar senha (o X manda um link de redefinição pro
+   > seu e-mail).
 3. Na primeira abertura o modelo de tradução é baixado do Hugging Face (2,5 a 3,2 GB). O progresso
    aparece no título da janela e na barra de tarefas; o X já pode ser usado enquanto isso. Se a
    conexão cair, o download continua de onde parou.
@@ -118,6 +125,8 @@ Para ver as placas que o llama-server enxerga:
 - **Primeiras traduções lentas na GPU**: na primeira vez o driver compila os shaders do Vulkan;
   depois fica rápido.
 - **Fotos não são traduzidas**: na versão CPU isso vem desligado. Na GPU, veja `logs\ocr.log`.
+- **Login com o Google não funciona**: limitação do Google com navegadores embutidos (veja
+  [Primeira execução](#primeira-execução)); use usuário e senha do X.
 - **Porta em uso**: mude `portaLlm` / `portaOcr` no `config.json`.
 
 ## Desenvolvimento

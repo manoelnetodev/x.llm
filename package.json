@@ -5,6 +5,11 @@
   "description": "x.com num app desktop com tradução automática para português por IA local (TranslateGemma + llama.cpp)",
   "author": "manoelnetodev",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/manoelnetodev/x.llm.git"
+  },
+  "homepage": "https://github.com/manoelnetodev/x.llm",
   "main": "src/main.js",
   "variante": "gpu",
   "scripts": {
