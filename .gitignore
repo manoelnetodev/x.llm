@@ -1,0 +1,18 @@
+node_modules/
+dist/
+vendor/
+
+# Modelos (GGUF de vários GB: o app baixa na primeira execução)
+modelo/
+*.gguf
+*.gguf.part
+
+# Python do OCR
+ocr/.venv*/
+__pycache__/
+*.pyc
+*.spec
+
+*.log
+.DS_Store
+Thumbs.db

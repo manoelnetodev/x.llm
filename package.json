@@ -1,0 +1,29 @@
+{
+  "name": "x-electron",
+  "productName": "X.LLM",
+  "version": "0.1.0",
+  "description": "x.com num app desktop com tradução automática para português por IA local (TranslateGemma + llama.cpp)",
+  "author": "manoelnetodev",
+  "license": "MIT",
+  "main": "src/main.js",
+  "variante": "gpu",
+  "scripts": {
+    "start": "electron .",
+    "start:cpu": "electron . --variante=cpu",
+    "preparar:gpu": "node scripts/preparar.js gpu",
+    "preparar:cpu": "node scripts/preparar.js cpu",
+    "dist:gpu": "node scripts/empacotar.js gpu",
+    "dist:cpu": "node scripts/empacotar.js cpu",
+    "dist": "node scripts/empacotar.js cpu && node scripts/empacotar.js gpu",
+    "icone": "node scripts/gerar-icone.js"
+  },
+  "dependencies": {
+    "eld": "^2.1.0"
+  },
+  "devDependencies": {
+    "electron": "^45.0.0",
+    "electron-builder": "^26.18.0",
+    "png-to-ico": "^3.0.2",
+    "sharp": "^0.35.5"
+  }
+}

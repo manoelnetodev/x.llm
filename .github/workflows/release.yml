@@ -1,0 +1,47 @@
+# Gera os instaladores CPU e GPU e publica no release quando uma tag v* é enviada
+# (ex.: git tag v0.1.0 && git push origin v0.1.0). Também roda manualmente pela aba Actions.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        variante: [cpu, gpu]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: astral-sh/setup-uv@v6
+      - run: npm ci
+      - run: npm run dist:${{ matrix.variante }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # API do GitHub ao buscar o llama.cpp
+      - uses: actions/upload-artifact@v4
+        with:
+          name: X.LLM-${{ matrix.variante }}
+          path: dist/*.exe
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.exe
+          generate_release_notes: true

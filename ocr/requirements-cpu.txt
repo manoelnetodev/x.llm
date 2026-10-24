@@ -1,0 +1,3 @@
+# OCR da versão CPU
+rapidocr==3.10.0
+onnxruntime
