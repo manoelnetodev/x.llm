@@ -23,6 +23,7 @@ build({
   config: {
     appId: 'io.github.manoelnetodev.xllm',
     productName: 'X.LLM',
+    publish: null, // o release é feito pelo workflow (o app não tem atualização automática)
     // Grava a variante no package.json de dentro do app (lido por src/config.js)
     extraMetadata: { variante },
     directories: { output: 'dist', buildResources: 'build' },
