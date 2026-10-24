@@ -16,8 +16,9 @@
 
 - **Tweets e bios em qualquer idioma viram português** no lugar do original, com a badge
   "Traduzido por X.LLM" e um "ver original" para alternar.
-- **Texto dentro das fotos também** (versão GPU): OCR local encontra os blocos de texto, traduz e
+- **Texto dentro das fotos também**: OCR local encontra os blocos de texto, traduz e
   desenha a tradução por cima, com as cores amostradas da própria imagem.
+- Enquanto traduz aparece "Traduzindo…", e o que está na tela é traduzido primeiro.
 - O que já está em português não é tocado. Links, @menções e #hashtags continuam clicáveis.
 - Feed mais limpo: sem coluna da direita (trends, Premium), sem anúncios, sem botões flutuantes do
   Grok/Chat, sem autoplay de vídeo, "Show more" expandido sozinho, feed com 720 px.
@@ -37,8 +38,8 @@ Baixe o instalador em [Releases](../../releases). São duas versões; escolha **
 | Arquivo | `X.LLM-GPU-Setup-x.y.z.exe` | `X.LLM-CPU-Setup-x.y.z.exe` |
 | Tradução roda na | placa de vídeo (Vulkan: NVIDIA, AMD ou Intel) | processador |
 | Modelo | TranslateGemma 4B Q6_K (3,2 GB) | TranslateGemma 4B Q4_K_M (2,5 GB) |
-| Texto nas fotos | ligado (OCR na GPU via DirectML) | desligado por padrão (dá pra ligar) |
-| Velocidade de um tweet | quase instantâneo | alguns segundos |
+| Texto nas fotos | sim (OCR na GPU via DirectML) | sim (mais lento; só o que está na tela) |
+| Velocidade de um tweet | quase instantâneo | alguns segundos (aparece "Traduzindo…" enquanto isso) |
 
 Na dúvida: se você tem uma placa de vídeo dedicada com 6 GB ou mais, use a GPU.
 
@@ -85,6 +86,14 @@ versão CPU.
    aparece no título da janela e na barra de tarefas; o X já pode ser usado enquanto isso. Se a
    conexão cair, o download continua de onde parou.
 
+### Atualizações
+
+A partir da 0.1.1, o app confere sozinho se saiu versão nova (alguns segundos depois de abrir). Se
+tiver, ele pergunta: **Atualizar agora** baixa o instalador da mesma versão que você usa (CPU ou
+GPU), instala por cima e reabre o app; login, modelo e configurações são mantidos. Dá também para
+ver as novidades, deixar para depois ou pular aquela versão. Quem está na 0.1.0 precisa baixar a
+nova uma vez manualmente em [Releases](../../releases).
+
 Os dados do app ficam em `%APPDATA%\X.LLM`: login, modelo (`modelos\`), logs (`logs\`) e o
 `config.json` opcional.
 
@@ -102,13 +111,14 @@ Crie `%APPDATA%\X.LLM\config.json` com só o que quiser mudar e reabra o app. Ex
 | Opção | Padrão GPU | Padrão CPU | O que é |
 |---|---|---|---|
 | `modelo` | `translategemma-4b-it.Q6_K.gguf` | `translategemma-4b-it.Q4_K_M.gguf` | Nome de um arquivo do [repositório de GGUFs](https://huggingface.co/mradermacher/translategemma-4b-it-GGUF) (baixado sozinho) ou caminho completo de um `.gguf` |
-| `traduzirImagens` | `true` | `false` | Traduz o texto dentro das fotos |
+| `traduzirImagens` | `true` | `true` | Traduz o texto dentro das fotos |
 | `dispositivo` | automático | — | Placa usada pelo llama-server (`Vulkan0`, `Vulkan1`...). Com 2+ placas, o padrão divide o modelo entre elas |
 | `camadasGpu` | `99` | `0` | Camadas do modelo na placa de vídeo |
 | `simultaneos` | `4` | `2` | Traduções em paralelo |
 | `contexto` | `16384` | `8192` | Contexto total do llama-server (dividido entre as traduções em paralelo) |
 | `threads` | automático | automático | Threads de CPU do llama-server |
 | `llamaServer` | o embutido | o embutido | Caminho de outro `llama-server.exe` (ex.: um build CUDA seu; aí `dispositivo` vira `CUDA0`, `CUDA1`...) |
+| `verificarAtualizacoes` | `true` | `true` | Avisa quando sai versão nova no GitHub |
 | `portaLlm` / `portaOcr` | `8099` / `8097` | `8099` / `8097` | Portas locais dos serviços |
 
 Para ver as placas que o llama-server enxerga:
@@ -124,7 +134,10 @@ Para ver as placas que o llama-server enxerga:
   aparece ali; tente a versão CPU ou um modelo menor (`"modelo": "translategemma-4b-it.Q4_K_M.gguf"`).
 - **Primeiras traduções lentas na GPU**: na primeira vez o driver compila os shaders do Vulkan;
   depois fica rápido.
-- **Fotos não são traduzidas**: na versão CPU isso vem desligado. Na GPU, veja `logs\ocr.log`.
+- **Fotos não são traduzidas**: veja `logs\ocr.log`. Na CPU cada foto leva alguns segundos, e as
+  fotos só entram depois dos textos que estão na tela.
+- **Na CPU está lento demais**: desligue as fotos (`"traduzirImagens": false`) ou use a versão GPU,
+  se tiver uma placa de vídeo dedicada.
 - **Login com o Google não funciona**: limitação do Google com navegadores embutidos (veja
   [Primeira execução](#primeira-execução)); use usuário e senha do X.
 - **Porta em uso**: mude `portaLlm` / `portaOcr` no `config.json`.
@@ -168,6 +181,7 @@ src/
   tradutor.js   fila de traduções no llama-server (TranslateGemma)
   imagens.js    tradução do texto das fotos (OCR + tradutor)
   modelo.js     baixa o modelo do Hugging Face na primeira vez
+  atualizacao.js  avisa de versão nova no GitHub e instala por cima
   servico.js    sobe/derruba os processos locais (llama-server, OCR)
   config.js     variante CPU/GPU, caminhos e config.json do usuário
 ocr/

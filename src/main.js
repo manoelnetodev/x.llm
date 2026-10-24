@@ -1,5 +1,6 @@
 const { app, BrowserWindow, WebContentsView, dialog, ipcMain, session, shell } = require('electron')
 const path = require('path')
+const atualizacao = require('./atualizacao')
 const config = require('./config')
 const modelo = require('./modelo')
 const tradutor = require('./tradutor')
@@ -43,6 +44,14 @@ button[data-testid="tweet-text-show-more-link"] { display: none !important; } /*
 [data-traducao="en"] + .xel-traducao .xel-badge { opacity: .45; }
 .xel-alternar { margin-left: auto; font-size: 13px; line-height: 16px; color: rgb(113, 118, 123); cursor: pointer; }
 .xel-alternar:hover { text-decoration: underline; }
+/* "Traduzindo…" enquanto espera (tweet/bio embaixo do texto, foto no canto) */
+.xel-pendente .xel-badge { gap: 6px; opacity: .8; }
+.xel-pendente-foto { position: absolute; top: 8px; left: 8px; z-index: 2; pointer-events: none;
+  font-family: TwitterChirp, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+.xel-pendente-foto .xel-badge { background: rgba(0, 0, 0, .7); color: #fff; border-color: rgba(255, 255, 255, .25); }
+.xel-giro { width: 10px; height: 10px; border-radius: 50%; border: 2px solid currentColor;
+  border-right-color: transparent; animation: xel-giro .8s linear infinite; }
+@keyframes xel-giro { to { transform: rotate(360deg); } }
 `
 
 const DO_X = /^https:\/\/([\w-]+\.)?(x|twitter)\.com\//
@@ -159,12 +168,14 @@ function avisarErro(servico, erro) {
 
 ipcMain.handle('traduzir', (_e, texto, lang) => tradutor.traduzir(texto, lang))
 ipcMain.handle('traduzir-imagem', (_e, src) => imagens.traduzirImagem(src))
+ipcMain.handle('config-tradutor', () => ({ simultaneos: config.simultaneos }))
 
 app.whenReady().then(() => {
   const win = criarJanela()
   mostrarDownload(win)
   tradutor.iniciar().catch((erro) => avisarErro('tradutor', erro))
   imagens.iniciar().catch((erro) => avisarErro('ocr', erro))
+  atualizacao.iniciar(win, () => { tradutor.parar(); imagens.parar() })
 })
 app.on('will-quit', () => { tradutor.parar(); imagens.parar() })
 app.on('window-all-closed', () => app.quit())

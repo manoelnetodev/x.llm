@@ -29,9 +29,8 @@ const PADROES = {
     simultaneos: 2,
     contexto: 8192,
     ocrGpu: false,
-    // Cada foto vira OCR + uma tradução por bloco de texto: na CPU isso deixa o
-    // processador no talo o tempo todo. Dá pra ligar no config.json.
-    traduzirImagens: false
+    // Foto só é processada quando está na tela e depois do texto (fila no preload)
+    traduzirImagens: true
   }
 }
 
@@ -40,6 +39,7 @@ const COMUNS = {
   llamaServer: null, // caminho de outro llama-server.exe (ex.: um build CUDA seu)
   dispositivo: null, // --device do llama-server (ex.: "CUDA1", "Vulkan0"); null = automático
   threads: null, // --threads do llama-server; null = automático
+  verificarAtualizacoes: true, // avisa quando sai versão nova no GitHub
   portaLlm: 8099,
   portaOcr: 8097
 }

@@ -29,7 +29,8 @@ function criarServico({ nome, exe, args, porta, env = {} }) {
       processo = spawn(exe, args, { env: { ...process.env, ...env }, windowsHide: true, stdio: ['ignore', log, log] })
       fs.closeSync(log)
       processo.on('exit', () => { processo = null; pronto = null })
-      for (let i = 0; i < 240; i++) {
+      // Até 5 min: carregar o modelo de um HD lento demora
+      for (let i = 0; i < 600; i++) {
         if (await saudavel()) return
         if (!processo) break
         await new Promise((r) => setTimeout(r, 500))

@@ -72,7 +72,9 @@ async function executar(texto, codigo) {
     body: JSON.stringify({
       prompt: montarPrompt(texto, codigo),
       temperature: 0,
-      n_predict: 1024,
+      // Teto proporcional ao texto: tradução nunca é muito maior que o original, e
+      // isso corta o modelo se ele desandar a repetir (na CPU seriam minutos)
+      n_predict: Math.min(1024, texto.length + 64), // caractere de CJK vira vários em PT
       stop: ['<end_of_turn>'],
       cache_prompt: true
     })

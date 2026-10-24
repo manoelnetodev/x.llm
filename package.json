@@ -1,7 +1,7 @@
 {
   "name": "x-electron",
   "productName": "X.LLM",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "x.com num app desktop com tradução automática para português por IA local (TranslateGemma + llama.cpp)",
   "author": "manoelnetodev",
   "license": "MIT",

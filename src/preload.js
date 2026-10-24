@@ -99,6 +99,84 @@ const BADGE = 'Traduzido por X.LLM'
 const ALTERNAR_PT = 'ver original'
 const ALTERNAR_ORIGINAL = 'ver tradução'
 
+// ---- Fila: o que está na tela primeiro ----
+// No máximo N pedidos ao mesmo tempo (N = traduções em paralelo do llama-server).
+// Cada vez que abre uma vaga, vai o item mais perto da tela: visível antes de fora
+// da tela, texto antes de foto. O que ficou muito longe (você rolou adiante) sai da
+// fila e volta a ser observado, pra não gastar tempo com o que você não está vendo.
+let maxPedidos = 2
+ipcRenderer.invoke('config-tradutor').then((c) => { maxPedidos = c.simultaneos; despachar() })
+let pedidosAtivos = 0
+const espera = new Map() // elemento -> { traduzir, observador, foto }
+const LONGE = 2500 // px
+
+function distanciaDaTela(r) {
+  return Math.max(0, r.top - innerHeight, -r.bottom)
+}
+
+function enfileirar(el, item) {
+  espera.set(el, item)
+  despachar()
+}
+
+function despachar() {
+  while (pedidosAtivos < maxPedidos && espera.size) {
+    let melhor = null
+    let melhorNota = Infinity
+    for (const [el, item] of espera) {
+      const r = el.getBoundingClientRect()
+      const d = distanciaDaTela(r)
+      if (!el.isConnected || d > LONGE) {
+        espera.delete(el)
+        removerPendente(el)
+        if (el.isConnected) item.observador.observe(el)
+        continue
+      }
+      const nota = (d ? 100000 + d : r.top) + (item.foto ? (d ? 50000 : 10000) : 0)
+      if (nota < melhorNota) { melhorNota = nota; melhor = el }
+    }
+    if (!melhor) return
+    const { traduzir } = espera.get(melhor)
+    espera.delete(melhor)
+    pedidosAtivos++
+    traduzir(melhor).finally(() => { pedidosAtivos--; despachar() })
+  }
+}
+
+// Falhou (servidor reiniciando, por exemplo): libera pra tentar de novo daqui a pouco
+function tentarDeNovo(el, atributo) {
+  setTimeout(() => { delete el.dataset[atributo]; agendar() }, 15000)
+}
+
+// ---- "Traduzindo…" enquanto espera ----
+const pendentes = new WeakMap() // elemento -> indicador
+function mostrarPendente(el, foto = false) {
+  if (pendentes.get(el)?.isConnected) return
+  const ind = document.createElement('div')
+  ind.className = foto ? 'xel-pendente xel-pendente-foto' : 'xel-rodape xel-pendente'
+  const chip = document.createElement('span')
+  chip.className = 'xel-badge'
+  const giro = document.createElement('span')
+  giro.className = 'xel-giro'
+  chip.append(giro, foto ? 'Traduzindo imagem…' : 'Traduzindo…')
+  ind.append(chip)
+  if (foto) el.append(ind)
+  else el.after(ind)
+  pendentes.set(el, ind)
+}
+function removerPendente(el) {
+  pendentes.get(el)?.remove()
+  pendentes.delete(el)
+}
+
+// Idioma informado pelo X que vai mesmo ser traduzido (não é português nem
+// código especial tipo qme/und/zxx): esses já mostram "Traduzindo…" na fila
+const nomeIdioma = new Intl.DisplayNames(['en'], { type: 'language' })
+function idiomaEstrangeiro(lang) {
+  if (!lang || lang.startsWith('pt')) return false
+  try { return nomeIdioma.of(lang) !== lang } catch { return false }
+}
+
 // Texto que cada tweet tinha quando foi traduzido; se mudar (Show more), traduz de novo
 const traduzidoDe = new WeakMap()
 const emAndamento = new WeakSet()
@@ -106,10 +184,13 @@ const emAndamento = new WeakSet()
 async function traduzirElemento(el) {
   if (emAndamento.has(el)) return
   const { comMarcadores, cru, links, temPalavras } = extrair(el)
-  if (!temPalavras) return
+  if (!temPalavras) return removerPendente(el)
   const snapshot = el.textContent
   const lang = el.getAttribute('lang') || 'auto'
   emAndamento.add(el)
+  // Bio (idioma detectado no main): só mostra "Traduzindo…" se demorar, pra não
+  // piscar em texto que já é português e volta na hora
+  const aviso = setTimeout(() => el.isConnected && mostrarPendente(el), 400)
 
   try {
     let conteudo
@@ -162,6 +243,7 @@ async function traduzirElemento(el) {
     rodape.append(badge, alternar)
     caixa.append(texto, rodape)
     // Troca a tradução antiga (se houver) pela nova de uma vez, sem piscar
+    removerPendente(el)
     const antiga = el.nextElementSibling
     if (antiga?.classList.contains('xel-traducao')) antiga.replaceWith(caixa)
     else el.after(caixa)
@@ -169,7 +251,10 @@ async function traduzirElemento(el) {
     traduzidoDe.set(el, snapshot)
   } catch (erro) {
     console.warn('[xbr] falha ao traduzir:', erro)
+    if (!traduzidoDe.has(el)) tentarDeNovo(el, 'traducao')
   } finally {
+    clearTimeout(aviso)
+    removerPendente(el)
     emAndamento.delete(el)
   }
 }
@@ -186,7 +271,8 @@ const naTela = new IntersectionObserver((entradas) => {
   for (const e of entradas) {
     if (!e.isIntersecting) continue
     naTela.unobserve(e.target)
-    traduzirElemento(e.target)
+    if (idiomaEstrangeiro(e.target.getAttribute('lang'))) mostrarPendente(e.target)
+    enfileirar(e.target, { traduzir: traduzirElemento, observador: naTela })
   }
 }, { rootMargin: '600px 0px' })
 
@@ -268,6 +354,8 @@ async function traduzirFoto(foto) {
   const img = foto.querySelector('img[src*="/media/"]')
   if (!img) return
   const src = img.src
+  // Foto sem texto volta rápido: o aviso só aparece se o OCR/tradução demorar
+  const aviso = setTimeout(() => foto.isConnected && mostrarPendente(foto, true), 800)
   try {
     const dados = await ipcRenderer.invoke('traduzir-imagem', src)
     // A célula pode ter sido reaproveitada pra outra foto enquanto traduzia
@@ -293,6 +381,10 @@ async function traduzirFoto(foto) {
     rodapeDasFotos(foto)?.fotos.add(foto)
   } catch (erro) {
     console.warn('[xbr] falha ao traduzir imagem:', erro)
+    tentarDeNovo(foto, 'xelFoto')
+  } finally {
+    clearTimeout(aviso)
+    removerPendente(foto)
   }
 }
 
@@ -343,7 +435,7 @@ const fotoNaTela = new IntersectionObserver((entradas) => {
   for (const e of entradas) {
     if (!e.isIntersecting) continue
     fotoNaTela.unobserve(e.target)
-    traduzirFoto(e.target)
+    enfileirar(e.target, { traduzir: traduzirFoto, observador: fotoNaTela, foto: true })
   }
 }, { rootMargin: '400px 0px' })
 
